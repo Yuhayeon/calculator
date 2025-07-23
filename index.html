@@ -1,0 +1,154 @@
+
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>연차 계산기</title>
+  <style>
+    body {
+      font-family: 'Arial', sans-serif;
+      padding: 20px;
+      background-color: #f4f4f4;
+    }
+    h1 {
+      text-align: center;
+    }
+    .container {
+      max-width: 600px;
+      margin: 0 auto;
+      background: white;
+      padding: 20px;
+      border-radius: 10px;
+      box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+    }
+    label, select, input[type="date"] {
+      display: block;
+      width: 100%;
+      margin-bottom: 10px;
+    }
+    button {
+      padding: 10px;
+      margin-top: 10px;
+      width: 100%;
+    }
+    .date-entry {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 5px;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>연차 계산기</h1>
+    <label>조 선택:</label>
+    <select id="teamSelect">
+      <option value="A">A조</option>
+      <option value="B">B조</option>
+      <option value="C">C조</option>
+      <option value="D">D조</option>
+    </select>
+
+    <label>날짜 선택:</label>
+    <input type="date" id="dateInput">
+
+    <label>연차 유형 선택:</label>
+    <select id="typeSelect">
+      <option value="연차">연차 (1일)</option>
+      <option value="전반차">전반차 (0.5일)</option>
+      <option value="후반차">후반차 (0.5일)</option>
+      <option value="전전반차">전전반차 (0.25일)</option>
+      <option value="후후반차">후후반차 (0.25일)</option>
+      <option value="병가">병가 (1일)</option>
+    </select>
+
+    <button onclick="addEntry()">추가</button>
+    <div id="entries"></div>
+
+    <button onclick="calculate()">연차 계산하기</button>
+    <h3 id="result"></h3>
+  </div>
+
+  <script>
+    const entries = [];
+    const baseDate = new Date("2025-07-21");
+    const baseStatus = { A: 1, B: 2, C: 3, D: 0 }; // 0:주간 1:야간 2:비번 3:휴무
+    const statusCycle = ["주간", "야간", "비번", "휴무"];
+    const typeValues = {
+      "연차": 1,
+      "전반차": 0.5,
+      "후반차": 0.5,
+      "전전반차": 0.25,
+      "후후반차": 0.25,
+      "병가": 1
+    };
+
+    function addEntry() {
+      const date = document.getElementById("dateInput").value;
+      const type = document.getElementById("typeSelect").value;
+      if (!date || !type) return;
+      entries.push({ date, type });
+      renderEntries();
+    }
+
+    function deleteEntry(index) {
+      entries.splice(index, 1);
+      renderEntries();
+    }
+
+    function renderEntries() {
+      const container = document.getElementById("entries");
+      container.innerHTML = "";
+      entries.forEach((entry, index) => {
+        const div = document.createElement("div");
+        div.className = "date-entry";
+        div.innerHTML = `${entry.date} - ${entry.type} <button onclick="deleteEntry(${index})">삭제</button>`;
+        container.appendChild(div);
+      });
+    }
+
+    function getStatusByDate(dateStr, team) {
+      const diff = Math.floor((new Date(dateStr) - baseDate) / (1000 * 60 * 60 * 24));
+      const base = baseStatus[team];
+      const idx = (base + diff) % 4;
+      return statusCycle[idx < 0 ? idx + 4 : idx];
+    }
+
+    function calculate() {
+      const team = document.getElementById("teamSelect").value;
+      const resultText = document.getElementById("result");
+      let total = 0;
+      const usedDates = new Set();
+      const fullDayDates = entries.filter(e => typeValues[e.type] === 1).map(e => e.date);
+
+      entries.forEach(e => {
+        total += typeValues[e.type];
+        usedDates.add(e.date);
+      });
+
+      for (let i = 0; i < fullDayDates.length; i++) {
+        const d1 = new Date(fullDayDates[i]);
+        for (let j = 0; j < fullDayDates.length; j++) {
+          if (i === j) continue;
+          const d2 = new Date(fullDayDates[j]);
+          const diff = Math.abs((d1 - d2) / (1000 * 60 * 60 * 24));
+          if (diff === 3) {
+            const min = new Date(Math.min(d1, d2));
+            const mid = new Date(min);
+            mid.setDate(mid.getDate() + 1);
+            const midStr = mid.toISOString().slice(0, 10);
+            const midStatus = getStatusByDate(midStr, team);
+            if (midStatus === "비번" && !usedDates.has(midStr)) {
+              total += 1;
+              usedDates.add(midStr);
+            }
+          }
+        }
+      }
+      resultText.innerText = `총 연차/병가 일수: ${total}일`;
+    }
+  </script>
+</body>
+</html>
