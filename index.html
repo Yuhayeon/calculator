@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>연차 계산기</title>
+  <style>
+    body {
+      font-family: 'Arial', sans-serif;
+      padding: 20px;
+      background-color: #f4f4f4;
+    }
+    h1 {
+      text-align: center;
+    }
+    .container {
+      max-width: 600px;
+      margin: 0 auto;
+      background: white;
+      padding: 20px;
+      border-radius: 10px;
+      box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+    }
+    label, select, input[type="date"] {
+      display: block;
+      width: 100%;
+      margin-bottom: 10px;
+    }
+    button {
+      padding: 10px;
+      margin-top: 10px;
+      width: 100%;
+    }
+    .date-entry {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 5px;
+    }
+    button:hover {
+      background-color: #5cb85c;
+      cursor: pointer;
+      transition: background-color 0.3s ease;
+    }
+    button:active {
+      background-color: #4cae4c;
+    }
+    .footer-text {
+      text-align: center;
+      margin-top: 30px;
+      font-size: 24px;
+      color: #007BFF;
+      font-weight: bold;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>연차 계산기</h1>
+    <label>조 선택:</label>
+    <select id="teamSelect">
+      <option value="A">A조</option>
+      <option value="B">B조</option>
+      <option value="C">C조</option>
+      <option value="D">D조</option>
+    </select>
+
+    <label>날짜 선택:</label>
+    <input type="date" id="dateInput">
+
+    <label>연차 유형 선택:</label>
+    <select id="typeSelect">
+      <option value="연차">연차 (1일)</option>
+      <option value="전반차">전반차 (0.5일)</option>
+      <option value="후반차">후반차 (0.5일)</option>
+      <option value="전전반차">전전반차 (0.25일)</option>
+      <option value="후후반차">후후반차 (0.25일)</option>
+      <option value="병가">병가 (1일)</option>
+    </select>
+
+    <button onclick="addEntry()">추가</button>
+    <div id="entries"></div>
+
+    <button onclick="calculate()">연차 계산하기</button>
+    <h3 id="result"></h3>
+  </div>
+
+  <div class="footer-text">KORAIL</div>
+
+  <script>
+    const entries = [];
+    const baseDate = new Date("2025-07-21");
+    const baseStatus = { A: 1, B: 2, C: 3, D: 0 };
+    const statusCycle = ["주간", "야간", "비번", "휴무"];
+    const typeValues = {
+      "연차": 1,
+      "전반차": 0.5,
+      "후반차": 0.5,
+      "전전반차": 0.25,
+      "후후반차": 0.25,
+      "병가": 1
+    };
+
+    function addEntry() {
+      const date = document.getElementById("dateInput").value;
+      const type = document.getElementById("typeSelect").value;
+
+      if (!date || !type) return;
+
+      const isDuplicate = entries.some(entry => entry.date === date);
+      if (isDuplicate) {
+        alert("이미 해당 날짜가 추가되었습니다.");
+        return;
+      }
+
+      entries.push({ date, type });
+      renderEntries();
+
+      const successMessage = document.createElement('div');
+      successMessage.innerText = `${date} - ${type} 연차가 추가되었습니다!`;
+      successMessage.style.color = 'green';
+      successMessage.style.marginTop = '10px';
+      successMessage.style.fontWeight = 'bold';
+      document.body.appendChild(successMessage);
+
+      setTimeout(() => successMessage.remove(), 3000);
+    }
+
+    function deleteEntry(index) {
+      entries.splice(index, 1);
+      renderEntries();
+    }
+
+    function renderEntries() {
+      const container = document.getElementById("entries");
+      container.innerHTML = "";
+      entries.forEach((entry, index) => {
+        const div = document.createElement("div");
+        div.className = "date-entry";
+        div.innerHTML = `${entry.date} - ${entry.type} <button onclick="deleteEntry(${index})">삭제</button>`;
+        container.appendChild(div);
+      });
+    }
+
+    function getStatusByDate(dateStr, team) {
+      const diff = Math.floor((new Date(dateStr) - baseDate) / (1000 * 60 * 60 * 24));
+      const base = baseStatus[team];
+      return statusCycle[(base + diff) % 4];
+    }
+
+    function calculate() {
+      const team = document.getElementById("teamSelect").value;
+      let total = 0;
+      entries.forEach(entry => {
+        const status = getStatusByDate(entry.date, team);
+        if (status === "주간" || status === "야간") {
+          total += typeValues[entry.type];
+        }
+      });
+      document.getElementById("result").innerText = `소모된 연차 일수: ${total}일`;
+    }
+  </script>
+</body>
+</html>
